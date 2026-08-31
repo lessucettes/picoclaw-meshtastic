@@ -1,0 +1,11 @@
+/bin/
+/dist/
+/tmp/
+*.log
+*.out
+*.test
+*.swp
+*.swo
+.DS_Store
+.idea/
+.vscode/

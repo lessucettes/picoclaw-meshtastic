@@ -1,0 +1,230 @@
+diff --git a/README.md b/README.md
+index a351c98d69337febd6d43d552fe1d14071c90532..a2ba885baaffaa7aaf543443873aa25d9ca88ebc 100644
+--- a/README.md
++++ b/README.md
+@@ -490,6 +490,7 @@ Talk to your PicoClaw through 19+ messaging platforms:
+ | **IRC** | Medium (server + nick) | IRC protocol | [Guide](docs/guides/chat-apps.md#irc) |
+ | **OneBot** | Medium (WebSocket URL) | OneBot v11 | [Guide](docs/channels/onebot/README.md) |
+ | **MQTT** | Easy (broker + agent_id) | MQTT pub/sub | [Guide](docs/channels/mqtt/README.md) |
++| **Meshtastic** | Easy (local radio) | Serial / HTTP Phone API | [Guide](docs/channels/meshtastic/README.md) |
+ | **MaixCam** | Easy (enable) | TCP socket | [Guide](docs/channels/maixcam/README.md) |
+ | **Pico** | Easy (enable) | Native protocol | Built-in |
+ | **Pico Client** | Easy (WebSocket URL) | WebSocket | Built-in |
+diff --git a/docs/guides/chat-apps.md b/docs/guides/chat-apps.md
+index 4fcf126535ae8118a9bd3be61402a7eb892b2c5d..0da0c8f047084725f8e9f65807f55fd54d7969cb 100644
+--- a/docs/guides/chat-apps.md
++++ b/docs/guides/chat-apps.md
+@@ -4,7 +4,7 @@
+ 
+ ## 💬 Chat Apps
+ 
+-Talk to your picoclaw through Telegram, Discord, WhatsApp, Matrix, QQ, DingTalk, LINE, WeCom, Feishu, Slack, IRC, OneBot, MQTT, MaixCam, or Pico (native protocol)
++Talk to your picoclaw through Telegram, Discord, WhatsApp, Matrix, QQ, DingTalk, LINE, WeCom, Feishu, Slack, IRC, OneBot, MQTT, Meshtastic, MaixCam, or Pico (native protocol)
+ 
+ > **Note**: Channels that rely on HTTP callbacks share a single Gateway HTTP server (`gateway.host`:`gateway.port`, default `127.0.0.1:18790`). Socket/stream-based channels such as Feishu, DingTalk, and WeCom do not rely on the shared webhook server for inbound delivery.
+ 
+@@ -24,6 +24,7 @@ Talk to your picoclaw through Telegram, Discord, WhatsApp, Matrix, QQ, DingTalk,
+ | **IRC**              | ⭐⭐ Medium        | Server + TLS configuration                            | [Docs](#irc)                                                                                                     |
+ | **OneBot**           | ⭐⭐ Medium        | NapCat/Go-CQHTTP compatible, community ecosystem      | [Docs](../channels/onebot/README.md)                                                                            |
+ | **MQTT**             | ⭐ Easy            | Any MQTT client via broker pub/sub                    | [Docs](../channels/mqtt/README.md)                                                                              |
++| **Meshtastic**       | ⭐ Easy            | Local mesh radio over Serial or HTTP Phone API        | [Docs](../channels/meshtastic/README.md)                                                                       |
+ | **MaixCam**          | ⭐ Easy            | Hardware integration channel for Sipeed AI cameras    | [Docs](../channels/maixcam/README.md)                                                                           |
+ | **Pico**             | ⭐ Easy            | Native PicoClaw protocol channel                      |                                                                                                                  |
+ 
+diff --git a/go.mod b/go.mod
+index a85ddd4069a7e6f453ae83c5ea2822dd19a9f86d..d2a38755297dcdfa363339f796b0dc89670f652b 100644
+--- a/go.mod
++++ b/go.mod
+@@ -48,7 +48,7 @@ require (
+ 	golang.org/x/oauth2 v0.36.0
+ 	golang.org/x/term v0.44.0
+ 	golang.org/x/time v0.15.0
+-	google.golang.org/protobuf v1.36.11
++	google.golang.org/protobuf v1.36.12
+ 	gopkg.in/yaml.v3 v3.0.1
+ 	maunium.net/go/mautrix v0.27.0
+ 	modernc.org/sqlite v1.53.0
+@@ -126,6 +126,7 @@ require (
+ )
+ 
+ require (
++	buf.build/gen/go/meshtastic/protobufs/protocolbuffers/go v1.36.12-20260811120449-6b706c172b5b.1
+ 	github.com/andybalholm/brotli v1.2.1 // indirect
+ 	github.com/bytedance/gopkg v0.1.3 // indirect
+ 	github.com/bytedance/sonic v1.15.2 // indirect
+@@ -147,6 +148,7 @@ require (
+ 	github.com/valyala/fasthttp v1.71.0 // indirect
+ 	github.com/valyala/fastjson v1.6.10 // indirect
+ 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
++	go.bug.st/serial v1.8.0
+ 	golang.org/x/arch v0.24.0 // indirect
+ 	golang.org/x/crypto v0.53.0
+ 	golang.org/x/net v0.55.0
+diff --git a/go.sum b/go.sum
+index 7fbeda961eceb24cd37f2513919e4200d5f05728..fcc8ba19f1203cf6e169c50144413792c8130fc3 100644
+--- a/go.sum
++++ b/go.sum
+@@ -1,5 +1,7 @@
+ aead.dev/minisign v0.2.0 h1:kAWrq/hBRu4AARY6AlciO83xhNnW9UaC8YipS2uhLPk=
+ aead.dev/minisign v0.2.0/go.mod h1:zdq6LdSd9TbuSxchxwhpA9zEb9YXcVGoE8JakuiGaIQ=
++buf.build/gen/go/meshtastic/protobufs/protocolbuffers/go v1.36.12-20260811120449-6b706c172b5b.1 h1:eWEP1j6rkiBoMwufoJf7XtGwIlh5+lNmkp/Y4UA1lBE=
++buf.build/gen/go/meshtastic/protobufs/protocolbuffers/go v1.36.12-20260811120449-6b706c172b5b.1/go.mod h1:BpiZcuhyk2z3FKkOaeGzF1g7a0p18Ur+GlHkVFjobfo=
+ cloud.google.com/go/compute/metadata v0.3.0/go.mod h1:zFmK7XCadkQkj6TtorcaGlCW1hT1fIilQDwofLpJ20k=
+ filippo.io/edwards25519 v1.2.0 h1:crnVqOiS4jqYleHd9vaKZ+HKtHfllngJIiOpNpoJsjo=
+ filippo.io/edwards25519 v1.2.0/go.mod h1:xzAOLCNug/yB62zG1bQ8uziwrIqIuxhctzJT18Q77mc=
+@@ -334,6 +336,8 @@ github.com/yosida95/uritemplate/v3 v3.0.2/go.mod h1:ILOh0sOhIJR3+L/8afwt/kE++YT0
+ github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
+ github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
+ github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
++go.bug.st/serial v1.8.0 h1:ZtnmN8aYXtPlTghwSvDWPHKBHL9TM6oFDa+KpSn4SQE=
++go.bug.st/serial v1.8.0/go.mod h1:d0MmS16Qt9b1m06yoYRNUXhRRTJV5Qg2S5EKqQtnayQ=
+ go.mau.fi/libsignal v0.2.1 h1:vRZG4EzTn70XY6Oh/pVKrQGuMHBkAWlGRC22/85m9L0=
+ go.mau.fi/libsignal v0.2.1/go.mod h1:iVvjrHyfQqWajOUaMEsIfo3IqgVMrhWcPiiEzk7NgoU=
+ go.mau.fi/util v0.9.8 h1:+/jf8eM2dAT2wx9UidmaneH28r/CSCKCniCyby1qWz8=
+@@ -463,8 +467,8 @@ google.golang.org/protobuf v1.21.0/go.mod h1:47Nbq4nVaFHyn7ilMalzfO3qCViNmqZ2kzi
+ google.golang.org/protobuf v1.23.0/go.mod h1:EGpADcykh3NcUnDUJcl1+ZksZNG86OlYog2l/sGQquU=
+ google.golang.org/protobuf v1.26.0-rc.1/go.mod h1:jlhhOSvTdKEhbULTjvd4ARK9grFBp09yW+WbY/TyQbw=
+ google.golang.org/protobuf v1.26.0/go.mod h1:9q0QmTI4eRPtz6boOQmLYwt+qCgq0jsYwAQnmE0givc=
+-google.golang.org/protobuf v1.36.11 h1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=
+-google.golang.org/protobuf v1.36.11/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
++google.golang.org/protobuf v1.36.12 h1:pJOKDDOyeXErUroCihFAd5LQuwXBSpVnKGrj5o/fwxc=
++google.golang.org/protobuf v1.36.12/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
+ gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+ gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+ gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c h1:Hei/4ADfdWqJk1ZMxUNpqntNwaWcugrBjAiHlqqRiVk=
+diff --git a/pkg/agent/agent_outbound.go b/pkg/agent/agent_outbound.go
+index b19ea75aea4c08067a8f1caef798a719a7db3e54..45deb95479cb5329c3f2ea4c7474011f30f719e4 100644
+--- a/pkg/agent/agent_outbound.go
++++ b/pkg/agent/agent_outbound.go
+@@ -40,6 +40,22 @@ func (al *AgentLoop) publishResponseOrError(
+ }
+ 
+ func (al *AgentLoop) PublishResponseIfNeeded(ctx context.Context, channel, chatID, sessionKey, response string) {
++	al.publishResponseIfNeeded(ctx, channel, chatID, sessionKey, response, nil)
++}
++
++func (al *AgentLoop) publishResponseForInboundIfNeeded(
++	ctx context.Context,
++	channel, chatID, sessionKey, response string,
++	inbound *bus.InboundContext,
++) {
++	al.publishResponseIfNeeded(ctx, channel, chatID, sessionKey, response, inbound)
++}
++
++func (al *AgentLoop) publishResponseIfNeeded(
++	ctx context.Context,
++	channel, chatID, sessionKey, response string,
++	inbound *bus.InboundContext,
++) {
+ 	if response == "" {
+ 		return
+ 	}
+@@ -73,8 +89,12 @@ func (al *AgentLoop) PublishResponseIfNeeded(ctx context.Context, channel, chatI
+ 		return
+ 	}
+ 
++	outboundCtx := bus.NewOutboundContext(channel, chatID, "")
++	if inbound != nil {
++		outboundCtx = outboundContextFromInbound(inbound, channel, chatID, "")
++	}
+ 	msg := bus.OutboundMessage{
+-		Context:    bus.NewOutboundContext(channel, chatID, ""),
++		Context:    outboundCtx,
+ 		SessionKey: sessionKey,
+ 		Content:    response,
+ 	}
+diff --git a/pkg/agent/agent_steering.go b/pkg/agent/agent_steering.go
+index 9b136e7cda0727d0b3a217a4383bcba3d939bb94..bd51729b1f571df2f07b4cc3d6802cd727b814af 100644
+--- a/pkg/agent/agent_steering.go
++++ b/pkg/agent/agent_steering.go
+@@ -58,7 +58,14 @@ func (al *AgentLoop) runTurnWithSteering(ctx context.Context, initialMsg bus.Inb
+ 
+ 	// Publish final response
+ 	if finalResponse != "" {
+-		al.PublishResponseIfNeeded(ctx, target.Channel, target.ChatID, target.SessionKey, finalResponse)
++		al.publishResponseForInboundIfNeeded(
++			ctx,
++			target.Channel,
++			target.ChatID,
++			target.SessionKey,
++			finalResponse,
++			&initialMsg.Context,
++		)
+ 	}
+ }
+ 
+diff --git a/pkg/channels/manager.go b/pkg/channels/manager.go
+index bea8154f87f7e2e9de66b48dcc3442213bf1da7b..0d0b886fd8b3b72c382d3c2f5c05b1d98b5f7502 100644
+--- a/pkg/channels/manager.go
++++ b/pkg/channels/manager.go
+@@ -66,13 +66,14 @@ type placeholderEntry struct {
+ 
+ // channelRateConfig maps channel name to per-second rate limit.
+ var channelRateConfig = map[string]float64{
+-	"telegram": 20,
+-	"discord":  1,
+-	"slack":    1,
+-	"matrix":   2,
+-	"line":     10,
+-	"qq":       5,
+-	"irc":      2,
++	"telegram":   20,
++	"discord":    1,
++	"slack":      1,
++	"matrix":     2,
++	"line":       10,
++	"qq":         5,
++	"irc":        2,
++	"meshtastic": 0.5,
+ }
+ 
+ type channelWorker struct {
+diff --git a/pkg/config/config_channel.go b/pkg/config/config_channel.go
+index 232c37cdd49a3f0af1c10aa09567addf6530ca04..fbfbb9272de8f0571332a0cf005e6429e874340d 100644
+--- a/pkg/config/config_channel.go
++++ b/pkg/config/config_channel.go
+@@ -38,6 +38,7 @@ const (
+ 	ChannelWhatsAppNative = "whatsapp_native"
+ 	ChannelTeamsWebHook   = "teams_webhook"
+ 	ChannelMQTT           = "mqtt"
++	ChannelMeshtastic     = "meshtastic"
+ 	ChannelSlackWebHook   = "slack_webhook"
+ )
+ 
+@@ -46,6 +47,16 @@ func initChannel() {
+ 	registerSingletonChannel(ChannelPicoClient)
+ }
+ 
++// MeshtasticSettings configures a direct Serial or HTTP Phone API connection.
++type MeshtasticSettings struct {
++	Transport      string `json:"transport"                 yaml:"-" env:"PICOCLAW_CHANNELS_MESHTASTIC_TRANSPORT"`
++	SerialPort     string `json:"serial_port,omitempty"     yaml:"-" env:"PICOCLAW_CHANNELS_MESHTASTIC_SERIAL_PORT"`
++	HTTPAddress    string `json:"http_address,omitempty"    yaml:"-" env:"PICOCLAW_CHANNELS_MESHTASTIC_HTTP_ADDRESS"`
++	ChannelIndices []int  `json:"channel_indices,omitempty" yaml:"-" env:"PICOCLAW_CHANNELS_MESHTASTIC_CHANNEL_INDICES"`
++	TextChunkBytes *int   `json:"text_chunk_bytes,omitempty" yaml:"-" env:"PICOCLAW_CHANNELS_MESHTASTIC_TEXT_CHUNK_BYTES"`
++	SendDelayMS    *int   `json:"send_delay_ms,omitempty"    yaml:"-" env:"PICOCLAW_CHANNELS_MESHTASTIC_SEND_DELAY_MS"`
++}
++
+ // singletonRegistry stores which channel types are singletons (only allow one instance).
+ // Each channel type should call registerSingletonChannel in its init() if it's a singleton.
+ var singletonRegistry = make(map[string]struct{})
+@@ -681,6 +692,7 @@ var channelSettingsFactory = map[string]any{
+ 	ChannelWhatsAppNative: (WhatsAppSettings{}),
+ 	ChannelTeamsWebHook:   (TeamsWebhookSettings{}),
+ 	ChannelMQTT:           (MQTTSettings{}),
++	ChannelMeshtastic:     (MeshtasticSettings{}),
+ 	ChannelSlackWebHook:   (SlackWebhookSettings{}),
+ }
+ 
+diff --git a/pkg/gateway/gateway.go b/pkg/gateway/gateway.go
+index 4159293758f9b54186a05342c44bea59b49a9ff2..51d9ae8a5dc09e047275a1bf804d8ca311f72882 100644
+--- a/pkg/gateway/gateway.go
++++ b/pkg/gateway/gateway.go
+@@ -26,6 +26,7 @@ import (
+ 	_ "github.com/sipeed/picoclaw/pkg/channels/irc"
+ 	_ "github.com/sipeed/picoclaw/pkg/channels/line"
+ 	_ "github.com/sipeed/picoclaw/pkg/channels/maixcam"
++	_ "github.com/sipeed/picoclaw/pkg/channels/meshtastic"
+ 	_ "github.com/sipeed/picoclaw/pkg/channels/mqtt"
+ 	_ "github.com/sipeed/picoclaw/pkg/channels/onebot"
+ 	_ "github.com/sipeed/picoclaw/pkg/channels/pico"
