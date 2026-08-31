@@ -200,3 +200,8 @@ A distributed Meshtastic-enabled PicoClaw binary must be accompanied by the
 GPLv3 Corresponding Source obligations and the applicable BSD notices. Read the
 [licensing review](docs/licensing.md) and [third-party notices](LICENSES/README.md)
 before distributing binaries.
+
+PicoClaw is open-source software by Shenzhen Silicon Speed Technology Co., Ltd.
+(Sipeed).
+
+Meshtastic is a registered trademark of Meshtastic LLC.
