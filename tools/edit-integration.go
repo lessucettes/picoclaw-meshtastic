@@ -133,6 +133,8 @@ func (al *AgentLoop) publishResponseIfNeeded(
 				"\tChannelIndices []int  `json:\"channel_indices,omitempty\" yaml:\"-\" env:\"PICOCLAW_CHANNELS_MESHTASTIC_CHANNEL_INDICES\"`\n" +
 				"\tTextChunkBytes *int   `json:\"text_chunk_bytes,omitempty\" yaml:\"-\" env:\"PICOCLAW_CHANNELS_MESHTASTIC_TEXT_CHUNK_BYTES\"`\n" +
 				"\tSendDelayMS    *int   `json:\"send_delay_ms,omitempty\"    yaml:\"-\" env:\"PICOCLAW_CHANNELS_MESHTASTIC_SEND_DELAY_MS\"`\n" +
+				"\t// Commands is a pointer so omitted (allow all) remains distinct from [] (block all).\n" +
+				"\tCommands *[]string `json:\"commands,omitempty\"        yaml:\"-\"`\n" +
 				"}\n\n" +
 				"// singletonRegistry stores which channel types are singletons (only allow one instance).",
 			goFile: true,

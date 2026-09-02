@@ -76,7 +76,8 @@ Serial/USB example:
       "settings": {
         "transport": "serial",
         "serial_port": "/dev/ttyACM0",
-        "channel_indices": [0]
+        "channel_indices": [0],
+        "commands": ["help", "nodes", "stats"]
       }
     }
   }
@@ -86,6 +87,12 @@ Serial/USB example:
 For Wi-Fi, use `"transport": "http"` and an `"http_address"` containing only
 a host or host:port, for example `meshtastic.local`. The channel uses the
 device's HTTP Phone API on plain HTTP; it does not accept a URL scheme or path.
+
+The optional `commands` setting controls PicoClaw commands received over
+Meshtastic. Omit it to preserve unrestricted command handling, use `[]` to
+block every `/command` and `!command`, or provide bare command names to allow
+only those commands. The same policy applies to DMs and public channels;
+ordinary messages are unaffected.
 
 Start PicoClaw normally:
 
@@ -105,6 +112,8 @@ security notes are in the
 - Direct messages and selected Primary/Secondary broadcast channels.
 - PicoClaw `allow_from`, mentions, prefixes, permissive group triggers, and
   native replies to recent bot packets.
+- Optional command filtering for direct and public-channel messages without
+  NodeID-based privileges or a hard-coded built-in command list.
 - Native Meshtastic `reply_id` preservation for agent responses.
 - Exact UTF-8 byte-aware packet sizing and ordered chunking, with a bounded
   eight-packet response policy.

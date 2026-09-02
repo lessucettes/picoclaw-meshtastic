@@ -18,18 +18,66 @@ import (
 	"github.com/sipeed/picoclaw/pkg/config"
 )
 
-func intp(v int) *int { return &v }
+func intp(v int) *int                  { return &v }
+func stringsPtr(v ...string) *[]string { return &v }
 
 func newTestChannel(t *testing.T, name string, group config.GroupTriggerConfig) (*Channel, *bus.MessageBus) {
+	return newTestChannelWithCommands(t, name, group, nil)
+}
+
+func newTestChannelWithCommands(t *testing.T, name string, group config.GroupTriggerConfig, commands *[]string) (*Channel, *bus.MessageBus) {
 	t.Helper()
 	bc := &config.Channel{Type: config.ChannelMeshtastic, AllowFrom: []string{"*"}, GroupTrigger: group}
 	bc.SetName(name)
 	b := bus.NewMessageBus()
-	c, err := NewChannel(bc, &config.MeshtasticSettings{Transport: "http", HTTPAddress: "radio.local"}, b)
+	c, err := NewChannel(bc, &config.MeshtasticSettings{Transport: "http", HTTPAddress: "radio.local", Commands: commands}, b)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return c, b
+}
+
+func TestCommandsConfigPreservesOmittedEmptyAndAllowlist(t *testing.T) {
+	raw := `{"channel_list":{"unrestricted":{"type":"meshtastic","settings":{"transport":"http","http_address":"a"}},"blocked":{"type":"meshtastic","settings":{"transport":"http","http_address":"b","commands":[]}},"allowlisted":{"type":"meshtastic","settings":{"transport":"http","http_address":"c","commands":["help","nodes","stats"]}}}}`
+	var cfg config.Config
+	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if err := config.InitChannelList(cfg.Channels); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		name string
+		want *[]string
+	}{
+		{name: "unrestricted"},
+		{name: "blocked", want: stringsPtr()},
+		{name: "allowlisted", want: stringsPtr("help", "nodes", "stats")},
+	} {
+		decoded, err := cfg.Channels[tc.name].GetDecoded()
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := decoded.(*config.MeshtasticSettings).Commands
+		if tc.want == nil {
+			if got != nil {
+				t.Fatalf("%s commands=%v, want omitted", tc.name, *got)
+			}
+			continue
+		}
+		if got == nil || strings.Join(*got, ",") != strings.Join(*tc.want, ",") {
+			t.Fatalf("%s commands=%v, want %v", tc.name, got, *tc.want)
+		}
+	}
+
+	data, err := json.Marshal(cfg.Channels["blocked"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"commands":[]`) {
+		t.Fatalf("empty command policy was not preserved: %s", data)
+	}
 }
 
 func TestSettingsDefaultsAndValidation(t *testing.T) {
@@ -216,6 +264,53 @@ func TestInboundRoutingTriggersAndMetadata(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("prefix was not published")
+	}
+}
+
+func TestInboundCommandFiltering(t *testing.T) {
+	tests := []struct {
+		name     string
+		commands *[]string
+		group    config.GroupTriggerConfig
+		to       uint32
+		text     string
+		want     string
+		publish  bool
+	}{
+		{name: "omitted policy allows any slash command in DM", to: 0x01020304, text: "/unknown argument", want: "/unknown argument", publish: true},
+		{name: "empty policy blocks slash command in DM", commands: stringsPtr(), to: 0x01020304, text: "/help", publish: false},
+		{name: "empty policy blocks bang command in DM", commands: stringsPtr(), to: 0x01020304, text: "!help", publish: false},
+		{name: "allowlist permits slash command", commands: stringsPtr("help", "nodes", "stats"), to: 0x01020304, text: "/help topic", want: "/help topic", publish: true},
+		{name: "allowlist permits bang command", commands: stringsPtr("help", "nodes", "stats"), to: 0x01020304, text: "!nodes now", want: "!nodes now", publish: true},
+		{name: "allowlist matches only top-level command case-insensitively", commands: stringsPtr("Stats"), to: 0x01020304, text: "/STATS detail", want: "/STATS detail", publish: true},
+		{name: "allowlist rejects different top-level command", commands: stringsPtr("stats"), to: 0x01020304, text: "/status", publish: false},
+		{name: "mention-triggered broadcast command is filtered after mention removal", commands: stringsPtr("stats"), group: config.GroupTriggerConfig{MentionOnly: true}, to: broadcastNode, text: "@Бот /help", publish: false},
+		{name: "mention-triggered broadcast command is allowed", commands: stringsPtr("stats"), group: config.GroupTriggerConfig{MentionOnly: true}, to: broadcastNode, text: "@Бот   /stats   now", want: "/stats now", publish: true},
+		{name: "prefix-triggered broadcast bang command is allowed", commands: stringsPtr("nodes"), group: config.GroupTriggerConfig{Prefixes: []string{"бот:"}}, to: broadcastNode, text: "бот: !nodes", want: "!nodes", publish: true},
+		{name: "ordinary DM is unaffected", commands: stringsPtr(), to: 0x01020304, text: "please explain /help", want: "please explain /help", publish: true},
+		{name: "ordinary mention-triggered broadcast is unaffected", commands: stringsPtr(), group: config.GroupTriggerConfig{MentionOnly: true}, to: broadcastNode, text: "@Бот hello", want: "hello", publish: true},
+	}
+
+	for i, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			c, _ := newTestChannelWithCommands(t, "mesh", tc.group, tc.commands)
+			a := readyAttempt(c)
+			c.handleInboundPacket(a, textPacket(0xaabbccdd, tc.to, uint32(100+i), 0, 0, tc.text))
+
+			select {
+			case got := <-c.inbound:
+				if !tc.publish {
+					t.Fatalf("blocked command was published: %+v", got)
+				}
+				if got.content != tc.want {
+					t.Fatalf("content=%q, want %q", got.content, tc.want)
+				}
+			default:
+				if tc.publish {
+					t.Fatal("allowed message was not published")
+				}
+			}
+		})
 	}
 }
 

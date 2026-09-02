@@ -21,6 +21,7 @@ import (
 
 	"github.com/sipeed/picoclaw/pkg/bus"
 	"github.com/sipeed/picoclaw/pkg/channels"
+	"github.com/sipeed/picoclaw/pkg/commands"
 	"github.com/sipeed/picoclaw/pkg/config"
 	"github.com/sipeed/picoclaw/pkg/logger"
 )
@@ -134,9 +135,10 @@ type Channel struct {
 	inbound    chan inboundPrompt
 	dropped    atomic.Uint64
 
-	inboundDedup *boundedCache[inboundKey]
-	sentBot      *boundedCache[sentKey]
-	prefixes     []string
+	inboundDedup    *boundedCache[inboundKey]
+	sentBot         *boundedCache[sentKey]
+	prefixes        []string
+	allowedCommands map[string]struct{}
 }
 
 type ioReader interface{ Read([]byte) (int, error) }
@@ -173,8 +175,26 @@ func NewChannel(bc *config.Channel, cfg *config.MeshtasticSettings, b *bus.Messa
 			c.prefixes = append(c.prefixes, p)
 		}
 	}
+	if resolved.Commands != nil {
+		c.allowedCommands = make(map[string]struct{}, len(*resolved.Commands))
+		for _, name := range *resolved.Commands {
+			name = strings.ToLower(strings.TrimSpace(name))
+			if name != "" {
+				c.allowedCommands[name] = struct{}{}
+			}
+		}
+	}
 	base.SetOwner(c)
 	return c, nil
+}
+
+func (c *Channel) commandAllowed(prompt string) bool {
+	name, command := commands.CommandName(prompt)
+	if !command || c.allowedCommands == nil {
+		return true
+	}
+	_, allowed := c.allowedCommands[name]
+	return allowed
 }
 
 func validateSettings(in *config.MeshtasticSettings) (config.MeshtasticSettings, []uint32, string, error) {

@@ -180,7 +180,7 @@ index bea8154f87f7e2e9de66b48dcc3442213bf1da7b..0d0b886fd8b3b72c382d3c2f5c05b1d9
  
  type channelWorker struct {
 diff --git a/pkg/config/config_channel.go b/pkg/config/config_channel.go
-index 232c37cdd49a3f0af1c10aa09567addf6530ca04..fbfbb9272de8f0571332a0cf005e6429e874340d 100644
+index 232c37cdd49a3f0af1c10aa09567addf6530ca04..b32b67ea00511ed2ee08693611c9d8aa112da6d6 100644
 --- a/pkg/config/config_channel.go
 +++ b/pkg/config/config_channel.go
 @@ -38,6 +38,7 @@ const (
@@ -191,7 +191,7 @@ index 232c37cdd49a3f0af1c10aa09567addf6530ca04..fbfbb9272de8f0571332a0cf005e6429
  	ChannelSlackWebHook   = "slack_webhook"
  )
  
-@@ -46,6 +47,16 @@ func initChannel() {
+@@ -46,6 +47,18 @@ func initChannel() {
  	registerSingletonChannel(ChannelPicoClient)
  }
  
@@ -203,12 +203,14 @@ index 232c37cdd49a3f0af1c10aa09567addf6530ca04..fbfbb9272de8f0571332a0cf005e6429
 +	ChannelIndices []int  `json:"channel_indices,omitempty" yaml:"-" env:"PICOCLAW_CHANNELS_MESHTASTIC_CHANNEL_INDICES"`
 +	TextChunkBytes *int   `json:"text_chunk_bytes,omitempty" yaml:"-" env:"PICOCLAW_CHANNELS_MESHTASTIC_TEXT_CHUNK_BYTES"`
 +	SendDelayMS    *int   `json:"send_delay_ms,omitempty"    yaml:"-" env:"PICOCLAW_CHANNELS_MESHTASTIC_SEND_DELAY_MS"`
++	// Commands is a pointer so omitted (allow all) remains distinct from [] (block all).
++	Commands *[]string `json:"commands,omitempty"        yaml:"-"`
 +}
 +
  // singletonRegistry stores which channel types are singletons (only allow one instance).
  // Each channel type should call registerSingletonChannel in its init() if it's a singleton.
  var singletonRegistry = make(map[string]struct{})
-@@ -681,6 +692,7 @@ var channelSettingsFactory = map[string]any{
+@@ -681,6 +694,7 @@ var channelSettingsFactory = map[string]any{
  	ChannelWhatsAppNative: (WhatsAppSettings{}),
  	ChannelTeamsWebHook:   (TeamsWebhookSettings{}),
  	ChannelMQTT:           (MQTTSettings{}),

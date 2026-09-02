@@ -43,6 +43,7 @@ Serial is always opened at 115200 baud. The PicoClaw process must have permissio
         "transport": "http",
         "http_address": "meshtastic.local",
         "channel_indices": [0, 1],
+        "commands": ["help", "nodes", "stats"],
         "text_chunk_bytes": 200,
         "send_delay_ms": 2000
       }
@@ -67,6 +68,7 @@ picoclaw gateway
 | `serial_port` | required for Serial | OS serial device path; invalid with HTTP. |
 | `http_address` | required for HTTP | Host or host:port; invalid with Serial. |
 | `channel_indices` | `[0]` | Unique active Primary/Secondary indexes in `0..7`; controls public channels and the proactive-DM fallback. |
+| `commands` | omitted | PicoClaw command names allowed from this channel. Omit to allow all commands, use `[]` to block every command, or list bare names such as `["help", "nodes", "stats"]` to allow only those names. |
 | `text_chunk_bytes` | `200` | Positive soft UTF-8 byte target, including visible chunk numbering. Exact protobuf/LoRa limits are always checked separately. |
 | `send_delay_ms` | `2000` (minimum `2000`) | Minimum interval between physical text submissions for this channel instance. |
 
@@ -84,6 +86,12 @@ Public channel messages share `channel:N` sessions. Trigger precedence is:
 4. the permissive group fallback when `mention_only` is false and no prefixes are configured.
 
 Unrelated public chatter is ignored. Prefixes and the first bot mention are removed from the prompt.
+
+## Command filtering
+
+The optional `commands` setting filters PicoClaw commands for both direct and public-channel messages. `/command` and `!command` forms are recognized. Matching is case-insensitive and uses only the first, top-level command name; arguments do not affect the decision. The filter runs after a configured group prefix or bot mention is removed and whitespace is normalized, so a message such as `@Bot /stats now` is checked as the `stats` command.
+
+The setting is independent of `allow_from` and does not grant privileges to any NodeID. A blocked command is consumed silently before it reaches PicoClaw or the LLM. Messages without a leading command prefix are unchanged. Command names are not checked against a hard-coded built-in list, so the policy also applies to commands added by PicoClaw in the future.
 
 ## Security
 

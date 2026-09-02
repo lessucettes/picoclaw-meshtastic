@@ -287,6 +287,9 @@ func (c *Channel) handleInboundPacket(a *attemptState, p *mesh.MeshPacket) {
 	if prompt == "" {
 		return
 	}
+	if !c.commandAllowed(prompt) {
+		return
+	}
 	if c.inboundDedup.seenOrAdd(inboundKey{from: from, id: p.GetId()}, c.now()) {
 		return
 	}
