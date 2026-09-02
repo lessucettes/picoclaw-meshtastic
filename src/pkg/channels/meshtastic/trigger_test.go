@@ -9,11 +9,11 @@ func TestMentionBoundaries(t *testing.T) {
 		text string
 		ok   bool
 	}{
-		{"@Бот привет", true},
-		{"x@Бот привет", false},
-		{"@Ботик привет", false},
+		{"@BOT1 hello", true},
+		{"x@BOT1 hello", false},
+		{"@BOT12 hello", false},
 	} {
-		start, end, ok := mentionAt(tc.text, "Бот")
+		start, end, ok := mentionAt(tc.text, "BOT1")
 		if ok != tc.ok {
 			t.Errorf("mentionAt(%q) ok=%v, want %v", tc.text, ok, tc.ok)
 		}
@@ -32,13 +32,13 @@ func TestOwnMentionIdentityAndPriority(t *testing.T) {
 		want      string
 		ok        bool
 	}{
-		{name: "node ID", text: "hello @!698508e0", ownNode: 0x698508e0, shortName: "GubB", want: "@!698508e0", ok: true},
-		{name: "node ID without short name", text: "@!698508e0 hello", ownNode: 0x698508e0, want: "@!698508e0", ok: true},
-		{name: "node ID case insensitive", text: "@!698508E0 hello", ownNode: 0x698508e0, shortName: "GubB", want: "@!698508E0", ok: true},
-		{name: "short name fallback", text: "hello @gubb", ownNode: 0x698508e0, shortName: "GubB", want: "@gubb", ok: true},
-		{name: "node ID has priority", text: "@GubB first @!698508e0 second", ownNode: 0x698508e0, shortName: "GubB", want: "@!698508e0", ok: true},
-		{name: "different node ID", text: "@!698508e1 hello", ownNode: 0x698508e0, shortName: "GubB", ok: false},
-		{name: "node ID boundary", text: "@!698508e0x hello", ownNode: 0x698508e0, shortName: "GubB", ok: false},
+		{name: "node ID", text: "hello @!0badc0de", ownNode: 0x0badc0de, shortName: "BOT1", want: "@!0badc0de", ok: true},
+		{name: "node ID without short name", text: "@!0badc0de hello", ownNode: 0x0badc0de, want: "@!0badc0de", ok: true},
+		{name: "node ID case insensitive", text: "@!0BADC0DE hello", ownNode: 0x0badc0de, shortName: "BOT1", want: "@!0BADC0DE", ok: true},
+		{name: "short name fallback", text: "hello @bot1", ownNode: 0x0badc0de, shortName: "BOT1", want: "@bot1", ok: true},
+		{name: "node ID has priority", text: "@BOT1 first @!0badc0de second", ownNode: 0x0badc0de, shortName: "BOT1", want: "@!0badc0de", ok: true},
+		{name: "different node ID", text: "@!0badc0df hello", ownNode: 0x0badc0de, shortName: "BOT1", ok: false},
+		{name: "node ID boundary", text: "@!0badc0dex hello", ownNode: 0x0badc0de, shortName: "BOT1", ok: false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			start, end, ok := ownMentionAt(tc.text, tc.ownNode, tc.shortName)

@@ -104,10 +104,10 @@ our node or broadcast are chat input. Drop zero IDs, self packets, unavailable
 channels, disallowed senders, duplicates, and text received before readiness.
 
 Group trigger precedence is native reply to a recent accepted bot group packet,
-literal `@ShortName` mention, configured prefix, then permissive group
-fallback. A reply to another user's packet is not a bot trigger. Remove the
-first configured prefix and first literal bot mention from the prompt after
-classification.
+the canonical own-node `@!NodeID` mention, an `@ShortName` mention, a configured
+prefix, then the permissive group fallback. A reply to another user's packet is
+not a bot trigger. Remove the first configured prefix and the selected bot
+mention from the prompt after classification.
 
 Inbound `MessageID` is the current packet ID;
 `ReplyToMessageID` is its decoded `reply_id`. Agent integration deliberately

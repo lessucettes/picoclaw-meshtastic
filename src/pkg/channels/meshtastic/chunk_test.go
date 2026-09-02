@@ -31,9 +31,9 @@ func collectChunks(t *testing.T, text string, soft int, reply uint32, direct boo
 func TestChunkingUTF8AndNumbering(t *testing.T) {
 	for _, text := range []string{
 		"one two three four five six",
-		"один два три четыре пять",
-		"one 😀 два 🌍 three",
-		strings.Repeat("я", 180),
+		"alpha beta gamma delta epsilon",
+		"one 😀 two 🌍 three",
+		strings.Repeat("😀", 90),
 		"https://example.invalid/" + strings.Repeat("long", 80),
 	} {
 		chunks := collectChunks(t, text, 24, 123, true)

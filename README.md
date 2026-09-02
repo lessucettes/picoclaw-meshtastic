@@ -60,7 +60,7 @@ belong in the PicoClaw checkout, not this project.
 ## Configure
 
 Meshtastic instances use PicoClaw's normal `channel_list` configuration. A
-Serial/USB example:
+Serial/USB example (all node IDs and short names shown here are fictional):
 
 ```json
 {
@@ -77,7 +77,7 @@ Serial/USB example:
         "transport": "serial",
         "serial_port": "/dev/ttyACM0",
         "channel_indices": [0],
-        "commands": ["help", "nodes", "stats"]
+        "commands": ["help", "context", "clear"]
       }
     }
   }

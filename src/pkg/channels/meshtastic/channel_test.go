@@ -38,7 +38,7 @@ func newTestChannelWithCommands(t *testing.T, name string, group config.GroupTri
 }
 
 func TestCommandsConfigPreservesOmittedEmptyAndAllowlist(t *testing.T) {
-	raw := `{"channel_list":{"unrestricted":{"type":"meshtastic","settings":{"transport":"http","http_address":"a"}},"blocked":{"type":"meshtastic","settings":{"transport":"http","http_address":"b","commands":[]}},"allowlisted":{"type":"meshtastic","settings":{"transport":"http","http_address":"c","commands":["help","nodes","stats"]}}}}`
+	raw := `{"channel_list":{"unrestricted":{"type":"meshtastic","settings":{"transport":"http","http_address":"a"}},"blocked":{"type":"meshtastic","settings":{"transport":"http","http_address":"b","commands":[]}},"allowlisted":{"type":"meshtastic","settings":{"transport":"http","http_address":"c","commands":["help","context","clear"]}}}}`
 	var cfg config.Config
 	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
 		t.Fatal(err)
@@ -53,7 +53,7 @@ func TestCommandsConfigPreservesOmittedEmptyAndAllowlist(t *testing.T) {
 	}{
 		{name: "unrestricted"},
 		{name: "blocked", want: stringsPtr()},
-		{name: "allowlisted", want: stringsPtr("help", "nodes", "stats")},
+		{name: "allowlisted", want: stringsPtr("help", "context", "clear")},
 	} {
 		decoded, err := cfg.Channels[tc.name].GetDecoded()
 		if err != nil {
@@ -189,7 +189,7 @@ func TestRouteReplyAndPacketConstruction(t *testing.T) {
 }
 
 func readyAttempt(c *Channel) *attemptState {
-	a := &attemptState{ctx: context.Background(), ownNode: 0x01020304, gotMyInfo: true, shortName: "Бот", channels: map[uint32]mesh.Channel_Role{0: mesh.Channel_PRIMARY, 1: mesh.Channel_SECONDARY}}
+	a := &attemptState{ctx: context.Background(), ownNode: 0x01020304, gotMyInfo: true, shortName: "BOT1", channels: map[uint32]mesh.Channel_Role{0: mesh.Channel_PRIMARY, 1: mesh.Channel_SECONDARY}}
 	c.setAttempt(a, false)
 	c.publishReady(a)
 	return a
@@ -204,14 +204,14 @@ func textPacket(from, to, id, channel, reply uint32, text string) *mesh.MeshPack
 }
 
 func TestInboundRoutingTriggersAndMetadata(t *testing.T) {
-	c, b := newTestChannel(t, "mesh_a", config.GroupTriggerConfig{Prefixes: []string{"бот:"}})
+	c, b := newTestChannel(t, "mesh_a", config.GroupTriggerConfig{Prefixes: []string{"bot:"}})
 	a := readyAttempt(c)
 	c.runCtx, c.cancel = context.WithCancel(context.Background())
 	c.wg.Add(1)
 	go c.dispatcher()
 	defer func() { c.cancel(); c.wg.Wait() }()
 
-	p := textPacket(0xaabbccdd, a.ownNode, 10, 1, 9, "привет")
+	p := textPacket(0xaabbccdd, a.ownNode, 10, 1, 9, "hello")
 	c.handleInboundPacket(a, p)
 	select {
 	case got := <-b.InboundChan():
@@ -233,7 +233,7 @@ func TestInboundRoutingTriggersAndMetadata(t *testing.T) {
 
 	// Duplicate packet is ignored, while a new packet with the same text is not.
 	c.handleInboundPacket(a, p)
-	c.handleInboundPacket(a, textPacket(0xaabbccdd, a.ownNode, 11, 1, 0, "привет"))
+	c.handleInboundPacket(a, textPacket(0xaabbccdd, a.ownNode, 11, 1, 0, "hello"))
 	select {
 	case <-b.InboundChan():
 	case <-time.After(time.Second):
@@ -241,43 +241,43 @@ func TestInboundRoutingTriggersAndMetadata(t *testing.T) {
 	}
 
 	// Public traffic needs a mention, configured prefix, or native reply.
-	c.handleInboundPacket(a, textPacket(0xaabbccdd, broadcastNode, 12, 0, 0, "шум"))
+	c.handleInboundPacket(a, textPacket(0xaabbccdd, broadcastNode, 12, 0, 0, "noise"))
 	select {
 	case got := <-b.InboundChan():
 		t.Fatalf("unrelated group traffic published: %+v", got)
 	case <-time.After(20 * time.Millisecond):
 	}
-	c.handleInboundPacket(a, textPacket(0xaabbccdd, broadcastNode, 13, 0, 0, "@Бот привет"))
+	c.handleInboundPacket(a, textPacket(0xaabbccdd, broadcastNode, 13, 0, 0, "@BOT1 hello"))
 	select {
 	case got := <-b.InboundChan():
-		if got.Content != "привет" || got.Context.Raw["meshtastic_trigger"] != "mention" || !got.Context.Mentioned || got.Context.ChatID != "channel:0" {
+		if got.Content != "hello" || got.Context.Raw["meshtastic_trigger"] != "mention" || !got.Context.Mentioned || got.Context.ChatID != "channel:0" {
 			t.Fatalf("mention result=%+v", got)
 		}
 	case <-time.After(time.Second):
 		t.Fatal("mention was not published")
 	}
-	c.handleInboundPacket(a, textPacket(0xaabbccdd, broadcastNode, 14, 0, 0, "@!01020304 привет по ID"))
+	c.handleInboundPacket(a, textPacket(0xaabbccdd, broadcastNode, 14, 0, 0, "@!01020304 hello by ID"))
 	select {
 	case got := <-b.InboundChan():
-		if got.Content != "привет по ID" || got.Context.Raw["meshtastic_trigger"] != "mention" || !got.Context.Mentioned {
+		if got.Content != "hello by ID" || got.Context.Raw["meshtastic_trigger"] != "mention" || !got.Context.Mentioned {
 			t.Fatalf("node ID mention result=%+v", got)
 		}
 	case <-time.After(time.Second):
 		t.Fatal("node ID mention was not published")
 	}
-	c.handleInboundPacket(a, textPacket(0xaabbccdd, broadcastNode, 15, 0, 0, "@Бот first @!01020304 second"))
+	c.handleInboundPacket(a, textPacket(0xaabbccdd, broadcastNode, 15, 0, 0, "@BOT1 first @!01020304 second"))
 	select {
 	case got := <-b.InboundChan():
-		if got.Content != "@Бот first second" || got.Context.Raw["meshtastic_trigger"] != "mention" || !got.Context.Mentioned {
+		if got.Content != "@BOT1 first second" || got.Context.Raw["meshtastic_trigger"] != "mention" || !got.Context.Mentioned {
 			t.Fatalf("node ID mention priority result=%+v", got)
 		}
 	case <-time.After(time.Second):
 		t.Fatal("priority node ID mention was not published")
 	}
-	c.handleInboundPacket(a, textPacket(0xaabbccdd, broadcastNode, 16, 0, 0, "бот: вопрос"))
+	c.handleInboundPacket(a, textPacket(0xaabbccdd, broadcastNode, 16, 0, 0, "bot: question"))
 	select {
 	case got := <-b.InboundChan():
-		if got.Content != "вопрос" || got.Context.Raw["meshtastic_trigger"] != "prefix" {
+		if got.Content != "question" || got.Context.Raw["meshtastic_trigger"] != "prefix" {
 			t.Fatalf("prefix result=%+v", got)
 		}
 	case <-time.After(time.Second):
@@ -298,15 +298,15 @@ func TestInboundCommandFiltering(t *testing.T) {
 		{name: "omitted policy allows any slash command in DM", to: 0x01020304, text: "/unknown argument", want: "/unknown argument", publish: true},
 		{name: "empty policy blocks slash command in DM", commands: stringsPtr(), to: 0x01020304, text: "/help", publish: false},
 		{name: "empty policy blocks bang command in DM", commands: stringsPtr(), to: 0x01020304, text: "!help", publish: false},
-		{name: "allowlist permits slash command", commands: stringsPtr("help", "nodes", "stats"), to: 0x01020304, text: "/help topic", want: "/help topic", publish: true},
-		{name: "allowlist permits bang command", commands: stringsPtr("help", "nodes", "stats"), to: 0x01020304, text: "!nodes now", want: "!nodes now", publish: true},
-		{name: "allowlist matches only top-level command case-insensitively", commands: stringsPtr("Stats"), to: 0x01020304, text: "/STATS detail", want: "/STATS detail", publish: true},
-		{name: "allowlist rejects different top-level command", commands: stringsPtr("stats"), to: 0x01020304, text: "/status", publish: false},
-		{name: "mention-triggered broadcast command is filtered after mention removal", commands: stringsPtr("stats"), group: config.GroupTriggerConfig{MentionOnly: true}, to: broadcastNode, text: "@Бот /help", publish: false},
-		{name: "mention-triggered broadcast command is allowed", commands: stringsPtr("stats"), group: config.GroupTriggerConfig{MentionOnly: true}, to: broadcastNode, text: "@Бот   /stats   now", want: "/stats now", publish: true},
-		{name: "prefix-triggered broadcast bang command is allowed", commands: stringsPtr("nodes"), group: config.GroupTriggerConfig{Prefixes: []string{"бот:"}}, to: broadcastNode, text: "бот: !nodes", want: "!nodes", publish: true},
+		{name: "allowlist permits slash command", commands: stringsPtr("help", "context", "clear"), to: 0x01020304, text: "/help topic", want: "/help topic", publish: true},
+		{name: "allowlist permits bang command", commands: stringsPtr("help", "context", "clear"), to: 0x01020304, text: "!context now", want: "!context now", publish: true},
+		{name: "allowlist matches only top-level command case-insensitively", commands: stringsPtr("Clear"), to: 0x01020304, text: "/CLEAR detail", want: "/CLEAR detail", publish: true},
+		{name: "allowlist rejects different top-level command", commands: stringsPtr("clear"), to: 0x01020304, text: "/reload", publish: false},
+		{name: "mention-triggered broadcast command is filtered after mention removal", commands: stringsPtr("clear"), group: config.GroupTriggerConfig{MentionOnly: true}, to: broadcastNode, text: "@BOT1 /help", publish: false},
+		{name: "mention-triggered broadcast command is allowed", commands: stringsPtr("clear"), group: config.GroupTriggerConfig{MentionOnly: true}, to: broadcastNode, text: "@BOT1   /clear   now", want: "/clear now", publish: true},
+		{name: "prefix-triggered broadcast bang command is allowed", commands: stringsPtr("context"), group: config.GroupTriggerConfig{Prefixes: []string{"bot:"}}, to: broadcastNode, text: "bot: !context", want: "!context", publish: true},
 		{name: "ordinary DM is unaffected", commands: stringsPtr(), to: 0x01020304, text: "please explain /help", want: "please explain /help", publish: true},
-		{name: "ordinary mention-triggered broadcast is unaffected", commands: stringsPtr(), group: config.GroupTriggerConfig{MentionOnly: true}, to: broadcastNode, text: "@Бот hello", want: "hello", publish: true},
+		{name: "ordinary mention-triggered broadcast is unaffected", commands: stringsPtr(), group: config.GroupTriggerConfig{MentionOnly: true}, to: broadcastNode, text: "@BOT1 hello", want: "hello", publish: true},
 		{name: "ordinary node ID mention-triggered broadcast is unaffected", commands: stringsPtr(), group: config.GroupTriggerConfig{MentionOnly: true}, to: broadcastNode, text: "@!01020304 hello", want: "hello", publish: true},
 	}
 
