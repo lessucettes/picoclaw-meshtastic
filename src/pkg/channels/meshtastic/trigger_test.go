@@ -23,6 +23,35 @@ func TestMentionBoundaries(t *testing.T) {
 	}
 }
 
+func TestOwnMentionIdentityAndPriority(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		text      string
+		ownNode   uint32
+		shortName string
+		want      string
+		ok        bool
+	}{
+		{name: "node ID", text: "hello @!698508e0", ownNode: 0x698508e0, shortName: "GubB", want: "@!698508e0", ok: true},
+		{name: "node ID without short name", text: "@!698508e0 hello", ownNode: 0x698508e0, want: "@!698508e0", ok: true},
+		{name: "node ID case insensitive", text: "@!698508E0 hello", ownNode: 0x698508e0, shortName: "GubB", want: "@!698508E0", ok: true},
+		{name: "short name fallback", text: "hello @gubb", ownNode: 0x698508e0, shortName: "GubB", want: "@gubb", ok: true},
+		{name: "node ID has priority", text: "@GubB first @!698508e0 second", ownNode: 0x698508e0, shortName: "GubB", want: "@!698508e0", ok: true},
+		{name: "different node ID", text: "@!698508e1 hello", ownNode: 0x698508e0, shortName: "GubB", ok: false},
+		{name: "node ID boundary", text: "@!698508e0x hello", ownNode: 0x698508e0, shortName: "GubB", ok: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			start, end, ok := ownMentionAt(tc.text, tc.ownNode, tc.shortName)
+			if ok != tc.ok {
+				t.Fatalf("ownMentionAt(%q) ok=%v, want %v", tc.text, ok, tc.ok)
+			}
+			if ok && tc.text[start:end] != tc.want {
+				t.Errorf("ownMentionAt(%q) matched %q, want %q", tc.text, tc.text[start:end], tc.want)
+			}
+		})
+	}
+}
+
 func TestExactDutyMinutes(t *testing.T) {
 	for _, tc := range []struct {
 		message string

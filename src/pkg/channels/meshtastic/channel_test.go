@@ -256,7 +256,25 @@ func TestInboundRoutingTriggersAndMetadata(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("mention was not published")
 	}
-	c.handleInboundPacket(a, textPacket(0xaabbccdd, broadcastNode, 14, 0, 0, "бот: вопрос"))
+	c.handleInboundPacket(a, textPacket(0xaabbccdd, broadcastNode, 14, 0, 0, "@!01020304 привет по ID"))
+	select {
+	case got := <-b.InboundChan():
+		if got.Content != "привет по ID" || got.Context.Raw["meshtastic_trigger"] != "mention" || !got.Context.Mentioned {
+			t.Fatalf("node ID mention result=%+v", got)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("node ID mention was not published")
+	}
+	c.handleInboundPacket(a, textPacket(0xaabbccdd, broadcastNode, 15, 0, 0, "@Бот first @!01020304 second"))
+	select {
+	case got := <-b.InboundChan():
+		if got.Content != "@Бот first second" || got.Context.Raw["meshtastic_trigger"] != "mention" || !got.Context.Mentioned {
+			t.Fatalf("node ID mention priority result=%+v", got)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("priority node ID mention was not published")
+	}
+	c.handleInboundPacket(a, textPacket(0xaabbccdd, broadcastNode, 16, 0, 0, "бот: вопрос"))
 	select {
 	case got := <-b.InboundChan():
 		if got.Content != "вопрос" || got.Context.Raw["meshtastic_trigger"] != "prefix" {
@@ -289,6 +307,7 @@ func TestInboundCommandFiltering(t *testing.T) {
 		{name: "prefix-triggered broadcast bang command is allowed", commands: stringsPtr("nodes"), group: config.GroupTriggerConfig{Prefixes: []string{"бот:"}}, to: broadcastNode, text: "бот: !nodes", want: "!nodes", publish: true},
 		{name: "ordinary DM is unaffected", commands: stringsPtr(), to: 0x01020304, text: "please explain /help", want: "please explain /help", publish: true},
 		{name: "ordinary mention-triggered broadcast is unaffected", commands: stringsPtr(), group: config.GroupTriggerConfig{MentionOnly: true}, to: broadcastNode, text: "@Бот hello", want: "hello", publish: true},
+		{name: "ordinary node ID mention-triggered broadcast is unaffected", commands: stringsPtr(), group: config.GroupTriggerConfig{MentionOnly: true}, to: broadcastNode, text: "@!01020304 hello", want: "hello", publish: true},
 	}
 
 	for i, tc := range tests {

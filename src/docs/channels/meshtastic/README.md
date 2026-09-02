@@ -81,11 +81,11 @@ Direct messages always reach the agent when `allow_from` permits their node ID. 
 Public channel messages share `channel:N` sessions. Trigger precedence is:
 
 1. a native reply to a recent bot packet;
-2. a literal `@ShortName` mention of this node;
+2. a literal `@!NodeID` or `@ShortName` mention of this node;
 3. a configured prefix;
 4. the permissive group fallback when `mention_only` is false and no prefixes are configured.
 
-Unrelated public chatter is ignored. Prefixes and the first bot mention are removed from the prompt.
+Unrelated public chatter is ignored. Prefixes and the selected bot mention are removed from the prompt. The channel first looks for the canonical own-node ID form, such as `@!698508e0`, and then falls back to the current Meshtastic short name, such as `@GubB`. Matching is case-insensitive and requires token boundaries. If both forms occur, the Node ID mention has priority regardless of their textual order.
 
 ## Command filtering
 

@@ -35,5 +35,15 @@ func mentionAt(s, name string) (start, end int, ok bool) {
 	return 0, 0, false
 }
 
+// ownMentionAt prefers the canonical own-node ID even when a short-name mention appears earlier.
+func ownMentionAt(s string, ownNode uint32, shortName string) (start, end int, ok bool) {
+	if ownNode != 0 {
+		if start, end, ok := mentionAt(s, nodeID(ownNode)); ok {
+			return start, end, true
+		}
+	}
+	return mentionAt(s, shortName)
+}
+
 func prevRune(s string) rune { r, _ := utf8.DecodeLastRuneInString(s); return r }
 func isWordRune(r rune) bool { return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' }

@@ -110,7 +110,7 @@ security notes are in the
 - Meshtastic HTTP Phone API over Wi-Fi.
 - Multiple named PicoClaw Meshtastic channel instances.
 - Direct messages and selected Primary/Secondary broadcast channels.
-- PicoClaw `allow_from`, mentions, prefixes, permissive group triggers, and
+- PicoClaw `allow_from`, own `@!NodeID`/`@ShortName` mentions, prefixes, permissive group triggers, and
   native replies to recent bot packets.
 - Optional command filtering for direct and public-channel messages without
   NodeID-based privileges or a hard-coded built-in command list.

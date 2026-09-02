@@ -254,7 +254,8 @@ func (c *Channel) handleInboundPacket(a *attemptState, p *mesh.MeshPacket) {
 	}
 	original := string(d.GetPayload())
 	native := group && d.GetReplyId() != 0 && c.sentBot.contains(sentKey{id: d.GetReplyId(), channel: p.GetChannel()}, c.now())
-	_, _, mentioned := mentionAt(original, c.snapshotShortName(a))
+	ownNode, shortName := c.snapshotMentionIdentity(a)
+	_, _, mentioned := ownMentionAt(original, ownNode, shortName)
 	prefix, prefixMatched := c.matchPrefix(original)
 	trigger := ""
 	if direct {
@@ -279,7 +280,7 @@ func (c *Channel) handleInboundPacket(a *attemptState, p *mesh.MeshPacket) {
 	}
 	if mentioned {
 		// Re-locate after optional prefix removal to remove exactly the first mention.
-		if s, e, ok := mentionAt(prompt, c.snapshotShortName(a)); ok {
+		if s, e, ok := ownMentionAt(prompt, ownNode, shortName); ok {
 			prompt = prompt[:s] + prompt[e:]
 		}
 	}
@@ -326,13 +327,13 @@ func (c *Channel) handleInboundPacket(a *attemptState, p *mesh.MeshPacket) {
 	}
 }
 
-func (c *Channel) snapshotShortName(a *attemptState) string {
+func (c *Channel) snapshotMentionIdentity(a *attemptState) (uint32, string) {
 	c.stateMu.Lock()
 	defer c.stateMu.Unlock()
 	if c.state.attempt != a {
-		return ""
+		return 0, ""
 	}
-	return c.state.shortName
+	return c.state.ownNode, c.state.shortName
 }
 
 func (c *Channel) matchPrefix(s string) (string, bool) {
