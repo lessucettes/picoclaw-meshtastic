@@ -198,6 +198,14 @@ old patch or add a new baseline only when it can still be verified exactly.
 
 See the channel guide for the detailed operational limits.
 
+## How this was built
+
+The channel in this repository was vibe-coded with model `gpt-5.6-sol` against
+the pinned PicoClaw baseline, Meshtastic firmware, and schemas listed in
+`AGENTS.md`. The reviews, tests, and clean-room verifier described above are
+what keep the result honest; treat generated prose as a starting point and the
+source, firmware, and schemas as the authority.
+
 ## License
 
 This project is GPL-3.0-only because the exact maintained generated Meshtastic
@@ -213,4 +221,7 @@ before distributing binaries.
 PicoClaw is open-source software by Shenzhen Silicon Speed Technology Co., Ltd.
 (Sipeed).
 
-Meshtastic is a registered trademark of Meshtastic LLC.
+## Trademarks
+
+Meshtastic is a registered trademark of Meshtastic LLC. The Meshtastic
+trademark and the Meshtastic logo belong to Meshtastic LLC.
