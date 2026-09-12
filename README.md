@@ -1,5 +1,7 @@
 # picoclaw-meshtastic
 
+![picoclaw-meshtastic banner](assets/picoclaw-meshtastic.jpg)
+
 Native Meshtastic support for the official
 [PicoClaw](https://github.com/sipeed/picoclaw) project.
 
@@ -198,6 +200,12 @@ old patch or add a new baseline only when it can still be verified exactly.
 
 See the channel guide for the detailed operational limits.
 
+## AI-assisted development
+
+This project was vibe-coded with:
+
+- `gpt-5.6-sol`
+
 ## License
 
 This project is GPL-3.0-only because the exact maintained generated Meshtastic
@@ -213,4 +221,5 @@ before distributing binaries.
 PicoClaw is open-source software by Shenzhen Silicon Speed Technology Co., Ltd.
 (Sipeed).
 
-Meshtastic is a registered trademark of Meshtastic LLC.
+Meshtastic is a registered trademark of Meshtastic LLC, and the Meshtastic
+logo is the property of Meshtastic LLC.
