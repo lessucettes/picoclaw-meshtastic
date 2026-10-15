@@ -143,6 +143,9 @@ type Channel struct {
 
 type ioReader interface{ Read([]byte) (int, error) }
 
+// SuppressErrors is an optional agent capability for synthesized final diagnostics.
+func (c *Channel) SuppressErrors() bool { return c.cfg.SuppressErrors }
+
 func NewChannel(bc *config.Channel, cfg *config.MeshtasticSettings, b *bus.MessageBus) (*Channel, error) {
 	resolved, indices, baseAddress, err := validateSettings(cfg)
 	if err != nil {

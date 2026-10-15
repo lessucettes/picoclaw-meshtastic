@@ -79,7 +79,8 @@ Serial/USB example (all node IDs and short names shown here are fictional):
         "transport": "serial",
         "serial_port": "/dev/ttyACM0",
         "channel_indices": [0],
-        "commands": ["help", "context", "clear"]
+        "commands": ["help", "context", "clear"],
+        "suppress_errors": true
       }
     }
   }
@@ -95,6 +96,15 @@ Meshtastic. Omit it to preserve unrestricted command handling, use `[]` to
 block every `/command` and `!command`, or provide bare command names to allow
 only those commands. The same policy applies to DMs and public channels;
 ordinary messages are unaffected.
+
+Set `settings.suppress_errors` to `true` to keep PicoClaw runtime error
+notifications off the radio, including model/provider failures, context-retry
+notices, direct tool error notifications, and built-in empty-response/tool-limit
+notices. The default is `false` for
+compatibility. Local diagnostics and retries remain enabled; normal model
+answers (including an LLM's own explanation of a failure) are not filtered.
+The type-wide environment override is
+`PICOCLAW_CHANNELS_MESHTASTIC_SUPPRESS_ERRORS=true`.
 
 Start PicoClaw normally:
 
@@ -151,7 +161,7 @@ Hardware and meshtasticd checks are release sanity tests, not normal CI.
 
 ```text
 src/pkg/channels/meshtastic/       canonical channel and tests
-src/pkg/agent/                     Meshtastic-specific integration test
+src/pkg/agent/                     outbound diagnostic metadata and integration tests
 src/docs/channels/meshtastic/      installed channel guide
 tools/edit-integration.go          canonical edits to existing PicoClaw files
 integration/baseline.env           upstream/dependency pins

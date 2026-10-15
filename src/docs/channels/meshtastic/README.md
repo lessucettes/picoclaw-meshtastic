@@ -44,6 +44,7 @@ Serial is always opened at 115200 baud. The PicoClaw process must have permissio
         "http_address": "meshtastic.local",
         "channel_indices": [0, 1],
         "commands": ["help", "context", "clear"],
+        "suppress_errors": true,
         "text_chunk_bytes": 200,
         "send_delay_ms": 2000
       }
@@ -69,10 +70,39 @@ picoclaw gateway
 | `http_address` | required for HTTP | Host or host:port; invalid with Serial. |
 | `channel_indices` | `[0]` | Unique active Primary/Secondary indexes in `0..7`; controls public channels and the proactive-DM fallback. |
 | `commands` | omitted | PicoClaw command names allowed from this channel. Omit to allow all commands, use `[]` to block every command, or list bare names such as `["help", "context", "clear"]` to allow only those names. |
+| `suppress_errors` | `false` | Suppress PicoClaw runtime error notifications over radio, for both DMs and public channels. Local logs, tool results for the model, and retry behavior are unchanged. |
 | `text_chunk_bytes` | `200` | Positive soft UTF-8 byte target, including visible chunk numbering. Exact protobuf/LoRa limits are always checked separately. |
 | `send_delay_ms` | `2000` (minimum `2000`) | Minimum interval between physical text submissions for this channel instance. |
 
-The environment variables `PICOCLAW_CHANNELS_MESHTASTIC_TRANSPORT`, `..._SERIAL_PORT`, `..._HTTP_ADDRESS`, `..._CHANNEL_INDICES`, `..._TEXT_CHUNK_BYTES`, and `..._SEND_DELAY_MS` are type-wide overrides. Use per-instance JSON settings when named Meshtastic instances need different values.
+The environment variables `PICOCLAW_CHANNELS_MESHTASTIC_TRANSPORT`, `..._SERIAL_PORT`, `..._HTTP_ADDRESS`, `..._CHANNEL_INDICES`, `..._TEXT_CHUNK_BYTES`, `..._SEND_DELAY_MS`, and `..._SUPPRESS_ERRORS` are type-wide overrides. Use per-instance JSON settings when named Meshtastic instances need different values.
+
+## Runtime error notifications
+
+Set `settings.suppress_errors` to `true` to avoid spending radio airtime on
+PicoClaw-generated diagnostics. Omitted or `false` preserves normal delivery.
+The filter runs before routing, chunking, pacing, or waiting for a ready radio;
+a suppressed message completes without a send error or a radio packet ID.
+
+PicoClaw labels these outbound notifications with `Context.Raw["is_error"] = "true"`:
+
+- Message-processing failures (`Error processing message: ...`), including model/provider
+  unavailability, authentication failures, exhausted network retries, and processing timeouts.
+- The context-overflow notice (`Context window exceeded. Compressing history and retrying...`).
+- Direct user-facing tool results with `ToolResult.IsError`, including synchronous tools,
+  asynchronous completion callbacks, and hook-provided tool results.
+
+The built-in empty-model-response and `max_tool_iterations` notices are also
+suppressed. Their provenance is tracked through turn finalization and the channel's
+optional error-delivery capability, before the legacy string response boundary
+loses that information. Their text is still retained in local session history.
+
+The channel suppresses only identified runtime diagnostics, not text matching
+words such as `error`. The `is_error` metadata key is reserved for outbound
+runtime diagnostics; inbound transports must not use it. Most tool errors are already model-only (`ErrorResult`
+does not set `ForUser`). The LLM can still describe a failure in its normal final
+answer; that answer, explicit command replies, successful tool output, and tool
+progress feedback are not suppressed. Other channel types are unaffected.
+Use PicoClaw's tool-feedback settings separately if progress messages are also unwanted.
 
 ## Conversations and triggers
 

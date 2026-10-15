@@ -46,8 +46,16 @@ GOTOOLCHAIN="$PICOCLAW_GO_TOOLCHAIN" go run "$PROJECT_ROOT/tools/edit-integratio
 		docs/guides/chat-apps.md \
 		go.mod \
 		go.sum \
+		pkg/agent/agent.go \
+		pkg/agent/agent_message.go \
 		pkg/agent/agent_outbound.go \
 		pkg/agent/agent_steering.go \
+		pkg/agent/pipeline_execute.go \
+		pkg/agent/pipeline_finalize.go \
+		pkg/agent/pipeline_llm.go \
+		pkg/agent/steering.go \
+		pkg/agent/turn_coord.go \
+		pkg/agent/turn_state.go \
 		pkg/channels/manager.go \
 		pkg/config/config_channel.go \
 		pkg/gateway/gateway.go

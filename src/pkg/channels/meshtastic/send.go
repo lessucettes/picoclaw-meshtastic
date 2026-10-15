@@ -36,6 +36,10 @@ func (c *Channel) Send(ctx context.Context, msg bus.OutboundMessage) ([]string, 
 	if !c.IsRunning() {
 		return nil, channels.ErrNotRunning
 	}
+	if c.cfg.SuppressErrors && msg.Context.Raw["is_error"] == "true" {
+		logger.DebugCF("meshtastic", "suppressed outbound error", map[string]any{"channel": c.Name()})
+		return []string{}, nil
+	}
 	if !utf8.ValidString(msg.Content) {
 		return nil, fmt.Errorf("invalid UTF-8: %w", channels.ErrSendFailed)
 	}
