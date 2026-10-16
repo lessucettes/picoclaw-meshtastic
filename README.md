@@ -215,6 +215,7 @@ See the channel guide for the detailed operational limits.
 This project was vibe-coded with:
 
 - `gpt-5.6-sol`
+- `gpt-6.1-sol`
 
 ## License
 
